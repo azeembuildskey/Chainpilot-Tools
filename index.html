@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>ChainPilot Tools — Shipment documentation tools for freight forwarders</title>
+<meta name="description" content="Practical EXIM tools and reference for freight forwarders and export teams — shipment document completeness audits, Incoterms 2020 reference, export document checklists. Built by an EXIM documentation specialist." />
+<style>
+  :root{
+    --navy:#0B1F33; --navy-2:#0F2A44; --steel:#1C3A54; --slate:#41586B;
+    --bg:#EEF1F4; --bg-2:#E7ECF0; --card:#FFFFFF; --line:#D8DFE6; --line-2:#E4E9EE;
+    --ink:#12212E; --muted:#5E7182; --accent:#C4472A;
+    --ok:#1B7A54; --ok-bg:#E5F1EB;
+    --mono:ui-monospace,"SF Mono","JetBrains Mono",Menlo,Consolas,monospace;
+    --sans:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    --maxw:1040px;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  html,body{margin:0}
+  body{background:var(--bg);color:var(--ink);font-family:var(--sans);line-height:1.55;-webkit-font-smoothing:antialiased}
+  a{color:inherit;text-decoration:none}
+  .wrap{max-width:var(--maxw);margin:0 auto;padding:0 22px}
+  .eyebrow{font-family:var(--mono);font-size:11.5px;text-transform:uppercase;letter-spacing:.16em;color:var(--accent);font-weight:600}
+
+  /* Nav */
+  .topbar{position:sticky;top:0;z-index:50;background:rgba(11,31,51,.96);backdrop-filter:blur(6px);
+          color:#fff;border-bottom:1px solid #16344f}
+  .topbar .wrap{display:flex;align-items:center;gap:18px;height:60px}
+  .brand{font-weight:800;letter-spacing:-.02em;font-size:18px;display:flex;align-items:center;gap:9px}
+  .brand .mark{width:21px;height:21px;border:2px solid #fff;border-radius:4px;position:relative;flex:0 0 auto}
+  .brand .mark::before,.brand .mark::after{content:"";position:absolute;left:5px;right:5px;height:2px;background:#fff}
+  .brand .mark::before{top:5.5px}.brand .mark::after{bottom:5.5px}
+  .brand em{color:#8FB3CC;font-weight:600;font-style:normal}
+  .navlinks{margin-left:auto;display:flex;gap:26px;align-items:center}
+  .navlinks a{font-size:13.5px;color:#C4D0DB;font-weight:500}
+  .navlinks a:hover{color:#fff}
+  .nav-cta{background:#fff;color:var(--navy) !important;padding:8px 15px;border-radius:7px;font-weight:700;font-size:13.5px}
+  .nav-cta:hover{background:#DCE6EE}
+  @media(max-width:760px){.navlinks a:not(.nav-cta){display:none}}
+
+  /* Hero */
+  .hero{background:linear-gradient(180deg,var(--navy) 0%,var(--navy-2) 100%);color:#fff;border-bottom:3px solid var(--accent)}
+  .hero .wrap{padding:58px 22px 54px}
+  .hero h1{font-size:40px;line-height:1.1;letter-spacing:-.025em;margin:16px 0 18px;font-weight:800;max-width:17ch}
+  .hero .lead{font-size:17px;color:#C4D0DB;margin:0;max-width:56ch}
+  .hero-cta{margin-top:30px;display:flex;gap:12px;flex-wrap:wrap}
+  .btn{font-weight:700;font-size:14.5px;border-radius:8px;padding:12px 22px;cursor:pointer;border:1px solid transparent;display:inline-flex;align-items:center;gap:8px}
+  .btn.solid{background:var(--accent);color:#fff}
+  .btn.solid:hover{background:#a93b22}
+  .btn.wire{background:transparent;color:#fff;border-color:#35526d}
+  .btn.wire:hover{border-color:#5b7791}
+  .caps{margin-top:34px;display:flex;flex-wrap:wrap;gap:8px}
+  .cap-chip{font-family:var(--mono);font-size:11.5px;color:#A9BCCC;border:1px solid #2a4157;padding:5px 11px;border-radius:20px}
+  .cap-chip b{color:#fff;font-weight:600}
+  @media(max-width:620px){.hero h1{font-size:30px}.hero .wrap{padding:42px 22px 40px}}
+
+  /* Section shell */
+  .sec{padding:56px 0}
+  .sec-alt{background:var(--bg-2)}
+  .sec-dark{background:var(--navy);color:#fff}
+  .sec-head{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;margin-bottom:26px;flex-wrap:wrap}
+  .sec-head h2{font-size:24px;letter-spacing:-.02em;margin:8px 0 0;font-weight:800}
+  .sec-head p{margin:6px 0 0;color:var(--muted);font-size:14.5px;max-width:52ch}
+  .sec-dark .sec-head p{color:#AEC0CE}
+  .count{font-family:var(--mono);font-size:12px;color:var(--muted)}
+
+  /* Tool cards */
+  .grid{display:grid;grid-template-columns:repeat(2,1fr);gap:18px}
+  @media(max-width:640px){.grid{grid-template-columns:1fr}}
+  .tool{display:flex;flex-direction:column;background:var(--card);border:1px solid var(--line);
+        border-radius:13px;padding:24px;transition:transform .13s,box-shadow .13s,border-color .13s}
+  .tool:hover{transform:translateY(-3px);box-shadow:0 10px 26px rgba(11,31,51,.11);border-color:#B7C6D3}
+  .tool:focus-visible{outline:2px solid var(--steel);outline-offset:2px}
+  .tool .thead{display:flex;align-items:center;justify-content:space-between;margin-bottom:15px}
+  .tool .no{font-family:var(--mono);font-size:12px;color:#9AA9B6}
+  .tag{font-family:var(--mono);font-size:10px;text-transform:uppercase;letter-spacing:.09em;padding:4px 9px;border-radius:20px;font-weight:600}
+  .tag.new{color:var(--ok);background:var(--ok-bg)}
+  .tag.live{color:var(--steel);background:#E7EEF3}
+  .tag.soon{color:#8A6D2F;background:#F3EBD7}
+  .tool h3{font-size:18.5px;margin:0 0 9px;letter-spacing:-.01em;color:var(--navy)}
+  .tool p{font-size:14px;color:var(--slate);margin:0 0 16px}
+  .feat{list-style:none;padding:0;margin:0 0 18px;display:flex;flex-wrap:wrap;gap:7px}
+  .feat li{font-family:var(--mono);font-size:11px;color:var(--steel);background:#EEF3F7;border:1px solid #E0E8EE;padding:4px 9px;border-radius:6px}
+  .go{margin-top:auto;font-weight:700;font-size:14px;color:var(--navy);display:inline-flex;align-items:center;gap:7px}
+  .go svg{transition:transform .13s}
+  .tool:hover .go svg{transform:translateX(3px)}
+  .tool.soon{background:#F4F6F8;border-style:dashed;border-color:#C6D0D9}
+  .tool.soon:hover{transform:none;box-shadow:none;border-color:#C6D0D9}
+  .tool.soon h3{color:var(--slate)}
+  .tool.soon .soonlbl{margin-top:auto;font-family:var(--mono);font-size:12px;color:#8A6D2F}
+
+  /* Reference */
+  .ref-grid{display:grid;grid-template-columns:1.15fr .85fr;gap:22px}
+  @media(max-width:820px){.ref-grid{grid-template-columns:1fr}}
+  .panel{background:var(--card);border:1px solid var(--line);border-radius:13px;overflow:hidden}
+  .panel-h{padding:16px 20px;border-bottom:1px solid var(--line-2);display:flex;align-items:baseline;gap:10px}
+  .panel-h h3{font-size:14px;text-transform:uppercase;letter-spacing:.09em;color:var(--slate);margin:0}
+  .panel-h span{font-family:var(--mono);font-size:11.5px;color:var(--muted)}
+  .panel-b{padding:8px 20px 18px}
+  .subhd{font-family:var(--mono);font-size:11px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin:16px 0 8px}
+  .inco{display:grid;grid-template-columns:auto 1fr;gap:6px 12px;font-size:13.5px;margin:0}
+  .inco dt{font-family:var(--mono);font-weight:700;color:var(--navy)}
+  .inco dd{margin:0;color:var(--slate)}
+  .doc{list-style:none;margin:0;padding:0}
+  .doc li{display:flex;gap:11px;padding:9px 0;border-bottom:1px solid var(--line-2);font-size:13.5px}
+  .doc li:last-child{border-bottom:0}
+  .doc .ck{flex:0 0 auto;color:var(--ok);margin-top:2px}
+  .doc b{color:var(--ink)} .doc span{color:var(--muted)}
+  .note{font-size:12px;color:var(--muted);margin:14px 20px 0;font-style:italic}
+
+  /* About */
+  .about-grid{display:grid;grid-template-columns:1fr 1fr;gap:26px;align-items:center}
+  @media(max-width:760px){.about-grid{grid-template-columns:1fr}}
+  .about h2{font-size:24px;letter-spacing:-.02em;margin:10px 0 14px;font-weight:800}
+  .about p{color:#C4D0DB;font-size:15px;margin:0 0 14px}
+  .creds{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:6px}
+  .cred{background:#0F2A44;border:1px solid #1d3d58;border-radius:10px;padding:15px}
+  .cred .k{font-family:var(--mono);font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:#8FB3CC}
+  .cred .v{font-size:14px;font-weight:600;margin-top:4px}
+
+  /* Contact */
+  .contact{text-align:center}
+  .contact h2{font-size:26px;letter-spacing:-.02em;margin:8px 0 12px;font-weight:800}
+  .contact p{color:var(--muted);max-width:48ch;margin:0 auto 26px;font-size:15px}
+  .contact .btn.solid{font-size:15px}
+  .contact .alt{margin-top:16px;font-size:13.5px;color:var(--muted)}
+  .contact .alt a{color:var(--steel);font-weight:600}
+
+  /* Footer */
+  footer{background:var(--navy);color:#9FB2C1;border-top:1px solid #16344f}
+  .foot{display:flex;justify-content:space-between;gap:14px;flex-wrap:wrap;padding:22px;font-size:12.5px}
+  .foot a{color:#C4D0DB;font-weight:600}
+
+  @media(prefers-reduced-motion:reduce){*{transition:none !important;scroll-behavior:auto}}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="wrap">
+    <a class="brand" href="#top"><span class="mark"></span>ChainPilot&nbsp;<em>Tools</em></a>
+    <nav class="navlinks">
+      <a href="#tools">Tools</a>
+      <a href="#reference">Reference</a>
+      <a href="#about">About</a>
+      <a class="nav-cta" href="https://mail.google.com/mail/?view=cm&fs=1&to=chainpilottools@gmail.com&su=ChainPilot%20Tools%20%E2%80%94%20free%20audit%20enquiry" target="_blank" rel="noopener">Get a free audit</a>
+    </nav>
+  </div>
+</div>
+
+<header class="hero" id="top">
+  <div class="wrap">
+    <div class="eyebrow">EXIM &amp; Logistics Automation</div>
+    <h1>Catch shipment document errors before they cost you.</h1>
+    <p class="lead">Practical, no-login tools and reference for freight forwarders and export teams — built by someone who has actually worked in export/import documentation, LC handling, and customs, not a generic automation shop.</p>
+    <div class="hero-cta">
+      <a class="btn solid" href="#tools">Explore the tools</a>
+      <a class="btn wire" href="https://mail.google.com/mail/?view=cm&fs=1&to=chainpilottools@gmail.com&su=ChainPilot%20Tools%20%E2%80%94%20free%20audit%20enquiry" target="_blank" rel="noopener">Book a free document audit</a>
+    </div>
+    <div class="caps">
+      <span class="cap-chip"><b>12-point</b> completeness check</span>
+      <span class="cap-chip"><b>ISO 6346</b> container validation</span>
+      <span class="cap-chip"><b>Incoterms 2020</b> aware</span>
+      <span class="cap-chip">Serving <b>USA · UK · EU</b></span>
+    </div>
+  </div>
+</header>
+
+<main>
+<section class="sec" id="tools">
+  <div class="wrap">
+    <div class="sec-head">
+      <div>
+        <div class="eyebrow">01 — Tools</div>
+        <h2>Live tools you can use right now</h2>
+        <p>Free to use, nothing to install, no sign-up. Open in your browser and go.</p>
+      </div>
+      <span class="count">2 live · 3 in build</span>
+    </div>
+
+    <div class="grid">
+      <!-- ===== LIVE TOOL CARD (copy a whole <a class="tool">…</a> block to add one) ===== -->
+      <a class="tool" href="shipment-audit.html">
+        <div class="thead"><span class="no">01</span><span class="tag new">New</span></div>
+        <h3>Shipment Document Completeness Audit</h3>
+        <p>Check shipment files against a 12-point documentation standard and print a client-ready report. Single shipment or a full CSV batch.</p>
+        <ul class="feat"><li>Incoterms 2020</li><li>HS code</li><li>ISO 6346</li><li>CSV batch</li><li>PDF report</li></ul>
+        <span class="go">Open tool <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span>
+      </a>
+
+      <a class="tool" href="shipment-checker.html">
+        <div class="thead"><span class="no">02</span><span class="tag live">Tool</span></div>
+        <h3>Shipment Document Checker</h3>
+        <p>A fast single-shipment check for the core documents — confirm nothing critical is missing before you file.</p>
+        <ul class="feat"><li>Quick check</li><li>Single shipment</li><li>No sign-up</li></ul>
+        <span class="go">Open tool <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span>
+      </a>
+      <!-- ===== END LIVE TOOL CARD ===== -->
+    </div>
+
+    <div class="sec-head" style="margin-top:40px">
+      <div><div class="eyebrow">Roadmap</div><h2 style="font-size:20px">Coming soon</h2></div>
+    </div>
+    <div class="grid">
+      <div class="tool soon">
+        <div class="thead"><span class="no">03</span><span class="tag soon">In build</span></div>
+        <h3>HS Code &amp; Container Validator</h3>
+        <p>Paste an HS code and container number for an instant format + ISO 6346 check-digit validation, on its own.</p>
+        <span class="soonlbl">In build →</span>
+      </div>
+      <div class="tool soon">
+        <div class="thead"><span class="no">04</span><span class="tag soon">In build</span></div>
+        <h3>Letter of Credit (LC) Document Checklist</h3>
+        <p>Walk your LC document set against common UCP 600 discrepancy points before you present to the bank.</p>
+        <span class="soonlbl">In build →</span>
+      </div>
+      <div class="tool soon">
+        <div class="thead"><span class="no">05</span><span class="tag soon">In build</span></div>
+        <h3>Incoterms Cost &amp; Risk Split</h3>
+        <p>Pick an Incoterm and instantly see who carries cost, risk, and responsibility at each stage of the move.</p>
+        <span class="soonlbl">In build →</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="sec sec-alt" id="reference">
+  <div class="wrap">
+    <div class="sec-head">
+      <div>
+        <div class="eyebrow">02 — Reference</div>
+        <h2>Quick reference for export teams</h2>
+        <p>The essentials worth keeping open on a busy documentation day.</p>
+      </div>
+    </div>
+
+    <div class="ref-grid">
+      <div class="panel">
+        <div class="panel-h"><h3>Incoterms 2020</h3><span>11 rules</span></div>
+        <div class="panel-b">
+          <div class="subhd">Any mode of transport</div>
+          <dl class="inco">
+            <dt>EXW</dt><dd>Ex Works — buyer collects at seller's premises; seller does the least.</dd>
+            <dt>FCA</dt><dd>Free Carrier — seller hands goods to the carrier named by the buyer.</dd>
+            <dt>CPT</dt><dd>Carriage Paid To — seller pays carriage to destination; risk passes at first carrier.</dd>
+            <dt>CIP</dt><dd>Carriage &amp; Insurance Paid To — CPT plus seller buys all-risk insurance.</dd>
+            <dt>DAP</dt><dd>Delivered At Place — seller delivers, ready for unloading, at the named place.</dd>
+            <dt>DPU</dt><dd>Delivered At Place Unloaded — seller delivers and unloads at the named place.</dd>
+            <dt>DDP</dt><dd>Delivered Duty Paid — seller bears everything, including import duties.</dd>
+          </dl>
+          <div class="subhd">Sea &amp; inland waterway only</div>
+          <dl class="inco">
+            <dt>FAS</dt><dd>Free Alongside Ship — seller delivers alongside the vessel at the port.</dd>
+            <dt>FOB</dt><dd>Free On Board — risk passes once goods are on board the vessel.</dd>
+            <dt>CFR</dt><dd>Cost &amp; Freight — seller pays freight to destination port; risk passes on board.</dd>
+            <dt>CIF</dt><dd>Cost, Insurance &amp; Freight — CFR plus marine insurance.</dd>
+          </dl>
+        </div>
+        <p class="note">General guidance, not advice for a specific shipment — always confirm terms against your contract and LC.</p>
+      </div>
+
+      <div class="panel">
+        <div class="panel-h"><h3>Core export documents</h3><span>checklist</span></div>
+        <div class="panel-b">
+          <ul class="doc">
+            <li><svg class="ck" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6"><path d="M20 6L9 17l-5-5"/></svg><div><b>Commercial Invoice</b> <span>— parties, goods, value, Incoterms, currency.</span></div></li>
+            <li><svg class="ck" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6"><path d="M20 6L9 17l-5-5"/></svg><div><b>Packing List</b> <span>— packages, weights, dimensions, marks.</span></div></li>
+            <li><svg class="ck" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6"><path d="M20 6L9 17l-5-5"/></svg><div><b>Bill of Lading / AWB</b> <span>— the transport contract &amp; title document.</span></div></li>
+            <li><svg class="ck" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6"><path d="M20 6L9 17l-5-5"/></svg><div><b>Certificate of Origin</b> <span>— where the goods were produced.</span></div></li>
+            <li><svg class="ck" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6"><path d="M20 6L9 17l-5-5"/></svg><div><b>Letter of Credit docs</b> <span>— when payment is on LC terms (UCP 600).</span></div></li>
+            <li><svg class="ck" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6"><path d="M20 6L9 17l-5-5"/></svg><div><b>Insurance Certificate</b> <span>— required under CIF / CIP.</span></div></li>
+            <li><svg class="ck" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6"><path d="M20 6L9 17l-5-5"/></svg><div><b>Shipping Bill / Export Declaration</b> <span>— customs filing.</span></div></li>
+            <li><svg class="ck" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6"><path d="M20 6L9 17l-5-5"/></svg><div><b>Inspection / Phytosanitary cert</b> <span>— product &amp; country dependent.</span></div></li>
+          </ul>
+        </div>
+        <p class="note">Requirements vary by country, commodity and buyer — treat this as a starting checklist.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="sec sec-dark about" id="about">
+  <div class="wrap">
+    <div class="about-grid">
+      <div>
+        <div class="eyebrow">03 — About</div>
+        <h2>Built by an EXIM documentation specialist</h2>
+        <p>ChainPilot Tools is built by Azeem Ahmed, who spent 6+ years across export/import documentation, letter-of-credit handling, customs operations, and supply chain — the exact desk where document errors turn into customs holds and demurrage.</p>
+        <p>That's the difference here: these tools encode how the paperwork actually works in the field, not a generic checklist. The goal is simple — help forwarders and export teams ship clean documents, faster.</p>
+      </div>
+      <div class="creds">
+        <div class="cred"><div class="k">Experience</div><div class="v">6+ years EXIM &amp; supply chain</div></div>
+        <div class="cred"><div class="k">Focus</div><div class="v">Docs · LC · Customs</div></div>
+        <div class="cred"><div class="k">Markets</div><div class="v">USA · UK · EU</div></div>
+        <div class="cred"><div class="k">Status</div><div class="v">Onboarding first pilots</div></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="sec contact" id="contact">
+  <div class="wrap">
+    <div class="eyebrow">04 — Get started</div>
+    <h2>Want a free audit of your shipment docs?</h2>
+    <p>Send your last few shipment files and I'll run a completeness audit and send back a clear report — no cost, no obligation.</p>
+    <a class="btn solid" href="https://mail.google.com/mail/?view=cm&fs=1&to=chainpilottools@gmail.com&su=ChainPilot%20Tools%20%E2%80%94%20free%20audit%20enquiry&body=Hi%20Azeem%2C%20I%27d%20like%20a%20free%20shipment%20document%20audit." target="_blank" rel="noopener">Email for a free audit</a>
+    <div class="alt">or write to <a href="https://mail.google.com/mail/?view=cm&fs=1&to=chainpilottools@gmail.com&su=ChainPilot%20Tools%20enquiry" target="_blank" rel="noopener">chainpilottools@gmail.com</a></div>
+  </div>
+</section>
+</main>
+
+<footer>
+  <div class="wrap foot">
+    <span>© <span id="yr"></span> ChainPilot Tools — for freight forwarders &amp; EXIM teams</span>
+    <span><a href="https://mail.google.com/mail/?view=cm&fs=1&to=chainpilottools@gmail.com&su=ChainPilot%20Tools%20enquiry" target="_blank" rel="noopener">chainpilottools@gmail.com</a></span>
+  </div>
+</footer>
+
+<script>document.getElementById("yr").textContent=new Date().getFullYear();</script>
+</body>
+</html>

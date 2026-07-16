@@ -1,0 +1,496 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Shipment Document Completeness Audit — ChainPilot Tools</title>
+<style>
+  :root{
+    --navy:#0B1F33; --steel:#1C3A54; --slate:#41586B;
+    --app-bg:#EEF1F4; --card:#FFFFFF; --manila:#FBF8F1; --line:#D8DFE6;
+    --ink:#12212E; --muted:#607182;
+    --ok:#1B7A54; --ok-bg:#E5F1EB;
+    --warn:#9A6412; --warn-bg:#F6EAD4;
+    --miss:#A5342F; --miss-bg:#F6E1DF;
+    --mono:ui-monospace,"SF Mono","JetBrains Mono",Menlo,Consolas,monospace;
+    --sans:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{background:var(--app-bg);color:var(--ink);font-family:var(--sans);line-height:1.5;
+       -webkit-font-smoothing:antialiased;padding-bottom:64px}
+  .wrap{max-width:960px;margin:0 auto;padding:0 20px}
+  a{color:var(--steel)}
+
+  /* Header */
+  header{background:var(--navy);color:#fff;border-bottom:3px solid #C4472A}
+  .top{display:flex;align-items:baseline;gap:14px;flex-wrap:wrap;padding:20px 0 18px}
+  .brand{font-weight:800;letter-spacing:-.02em;font-size:19px;display:flex;align-items:center;gap:9px}
+  .brand .mark{width:22px;height:22px;border:2px solid #fff;border-radius:4px;position:relative;flex:0 0 auto}
+  .brand .mark::before,.brand .mark::after{content:"";position:absolute;background:#fff}
+  .brand .mark::before{left:5px;right:5px;top:6px;height:2px}
+  .brand .mark::after{left:5px;right:5px;bottom:6px;height:2px}
+  .brand span{color:#8FB3CC;font-weight:600}
+  .toolname{font-size:12px;text-transform:uppercase;letter-spacing:.16em;color:#8FB3CC;
+            border-left:1px solid #33506A;padding-left:14px}
+  .tagline{color:#B9C7D3;font-size:13.5px;padding-bottom:20px;max-width:60ch}
+
+  /* Cards */
+  .card{background:var(--card);border:1px solid var(--line);border-radius:10px;margin-top:22px;
+        box-shadow:0 1px 2px rgba(11,31,51,.05)}
+  .card-h{padding:14px 20px;border-bottom:1px solid var(--line);display:flex;align-items:center;
+          justify-content:space-between;gap:12px}
+  .card-h h2{margin:0;font-size:13px;text-transform:uppercase;letter-spacing:.12em;color:var(--slate)}
+  .card-b{padding:20px}
+
+  /* Tabs */
+  .tabs{display:flex;gap:4px;background:#DCE3E9;padding:4px;border-radius:8px;width:fit-content}
+  .tabs button{border:0;background:transparent;font:inherit;font-weight:600;font-size:13.5px;
+        color:var(--slate);padding:7px 16px;border-radius:6px;cursor:pointer}
+  .tabs button[aria-selected="true"]{background:#fff;color:var(--navy);box-shadow:0 1px 2px rgba(0,0,0,.08)}
+
+  /* Form grid */
+  .grid{display:grid;grid-template-columns:repeat(2,1fr);gap:14px 18px}
+  @media(max-width:620px){.grid{grid-template-columns:1fr}}
+  .fld{display:flex;flex-direction:column;gap:5px}
+  .fld.col2{grid-column:1/-1}
+  .fld .lbl{font-size:11px;text-transform:uppercase;letter-spacing:.09em;color:var(--muted);font-weight:600}
+  .fld .lbl .n{color:#9AA9B6;font-family:var(--mono);margin-right:6px}
+  .fld input,.fld select{font:inherit;font-size:14px;padding:9px 11px;border:1px solid var(--line);
+        border-radius:7px;background:#fff;color:var(--ink);width:100%}
+  .fld .code input{font-family:var(--mono)}
+  input:focus,select:focus,button:focus-visible{outline:2px solid var(--steel);outline-offset:1px}
+  .pair{display:grid;grid-template-columns:1fr 96px;gap:8px}
+
+  /* Buttons */
+  .row-actions{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-top:20px}
+  .btn{font:inherit;font-weight:700;font-size:14px;border-radius:8px;padding:11px 20px;cursor:pointer;border:1px solid transparent}
+  .btn.primary{background:var(--navy);color:#fff}
+  .btn.primary:hover{background:#12314c}
+  .btn.ghost{background:#fff;color:var(--navy);border-color:var(--line)}
+  .btn.ghost:hover{border-color:var(--slate)}
+  .linkbtn{background:none;border:0;color:var(--steel);font:inherit;font-weight:600;cursor:pointer;
+           text-decoration:underline;padding:0;font-size:13.5px}
+
+  /* Drop zone */
+  .drop{border:2px dashed #B7C3CD;border-radius:10px;padding:34px 20px;text-align:center;background:#FAFBFC;cursor:pointer}
+  .drop.over{border-color:var(--steel);background:#EEF3F7}
+  .drop strong{display:block;color:var(--navy);font-size:15px}
+  .drop small{color:var(--muted)}
+  .map{display:grid;grid-template-columns:repeat(2,1fr);gap:10px 18px;margin-top:18px}
+  @media(max-width:620px){.map{grid-template-columns:1fr}}
+  .map .fld select{font-size:13px}
+
+  /* Report */
+  #report{display:none}
+  .report-paper{background:var(--manila);border:1px solid #E7E0CF}
+  .rp-head{padding:22px 24px;border-bottom:2px solid var(--navy);display:flex;justify-content:space-between;gap:20px;flex-wrap:wrap}
+  .rp-title{font-size:19px;font-weight:800;letter-spacing:-.01em;color:var(--navy);margin:0 0 10px}
+  .rp-meta{font-size:13px;color:var(--steel);display:grid;gap:3px}
+  .rp-meta b{color:var(--ink)}
+  .rp-meta input{font:inherit;font-size:13px;border:0;border-bottom:1px dashed #C7BCA0;background:transparent;
+        padding:1px 2px;min-width:150px;color:var(--ink);font-weight:600}
+
+  /* Stamp */
+  .stamp{align-self:flex-start;border:3px double currentColor;border-radius:8px;padding:8px 16px;
+         transform:rotate(-4deg);text-align:center;font-family:var(--mono);opacity:.92}
+  .stamp .s-status{font-size:20px;font-weight:800;letter-spacing:.06em;line-height:1}
+  .stamp .s-score{font-size:13px;margin-top:3px;letter-spacing:.04em}
+  .stamp.cleared{color:var(--ok)} .stamp.review{color:var(--warn)} .stamp.hold{color:var(--miss)}
+
+  .summary{display:flex;gap:0;border-bottom:1px solid #E7E0CF}
+  .summary div{flex:1;padding:14px 20px;text-align:center;border-right:1px solid #E7E0CF}
+  .summary div:last-child{border-right:0}
+  .summary .num{font-family:var(--mono);font-size:24px;font-weight:700;line-height:1}
+  .summary .cap{font-size:10.5px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin-top:5px}
+  .summary .ok .num{color:var(--ok)} .summary .warn .num{color:var(--warn)} .summary .miss .num{color:var(--miss)}
+
+  /* Checklist table */
+  table{width:100%;border-collapse:collapse;font-size:13.5px}
+  thead th{text-align:left;font-size:10.5px;text-transform:uppercase;letter-spacing:.09em;color:var(--muted);
+        padding:11px 14px;border-bottom:1px solid #E7E0CF;font-weight:700;background:#F3EEDF}
+  tbody td{padding:11px 14px;border-bottom:1px solid #EFE9DA;vertical-align:top}
+  tbody tr:last-child td{border-bottom:0}
+  td.no{font-family:var(--mono);color:#A99C7C;width:34px}
+  td.pt{font-weight:600;color:var(--ink);white-space:nowrap}
+  td.shown{font-family:var(--mono);color:var(--steel);word-break:break-word;max-width:220px}
+  .chip{display:inline-block;font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;
+        padding:3px 9px;border-radius:20px;white-space:nowrap}
+  .chip.ok{background:var(--ok-bg);color:var(--ok)}
+  .chip.warn{background:var(--warn-bg);color:var(--warn)}
+  .chip.missing{background:var(--miss-bg);color:var(--miss)}
+  td.note{color:var(--slate)}
+
+  /* Batch overview */
+  .agg{display:flex;gap:0;border-bottom:1px solid #E7E0CF;flex-wrap:wrap}
+  .agg div{flex:1;min-width:130px;padding:14px 20px;border-right:1px solid #E7E0CF}
+  .agg .num{font-family:var(--mono);font-size:22px;font-weight:700;color:var(--navy)}
+  .agg .cap{font-size:10.5px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin-top:4px}
+  tr.ship{cursor:pointer} tr.ship:hover td{background:#F6F1E3}
+  td.score{font-family:var(--mono);font-weight:700}
+  td.score.hold{color:var(--miss)} td.score.review{color:var(--warn)} td.score.cleared{color:var(--ok)}
+  .detail-row td{background:#FAF6EC;padding:0}
+  .detail-row table{font-size:12.5px}
+  .caret{display:inline-block;transition:transform .15s;color:var(--muted)}
+  tr.open .caret{transform:rotate(90deg)}
+  .rp-foot{padding:14px 24px;font-size:11.5px;color:var(--muted);border-top:1px solid #E7E0CF;
+           display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap}
+
+  .report-actions{display:flex;gap:12px;flex-wrap:wrap;padding:16px 20px;background:#F4F6F8;border-top:1px solid var(--line)}
+  .hint{font-size:12.5px;color:var(--muted);margin-top:8px}
+
+  @media print{
+    body{background:#fff;padding:0}
+    header,.card.controls,.report-actions,.no-print{display:none !important}
+    .wrap{max-width:none;padding:0}
+    .card{border:0;box-shadow:none;margin:0}
+    #report{display:block !important}
+    .report-paper{border:0;background:#fff}
+    .rp-meta input{border-bottom:0}
+    thead th{background:#f2f2f2 !important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+    .chip,.stamp,.summary .num,.agg .num{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  }
+  @media(prefers-reduced-motion:reduce){*{transition:none !important}}
+</style>
+</head>
+<body>
+<header>
+  <div class="wrap">
+    <div class="top">
+      <div class="brand"><span class="mark"></span>ChainPilot&nbsp;<span>Tools</span></div>
+      <div class="toolname">Shipment Document Completeness Audit</div>
+    </div>
+    <p class="tagline">Check export shipment files against a 12-point documentation standard before they reach the carrier or customs. Flags missing fields, invalid Incoterms, malformed HS codes, and container numbers that fail their ISO&nbsp;6346 check digit.</p>
+  </div>
+</header>
+
+<main class="wrap">
+  <!-- CONTROLS -->
+  <section class="card controls">
+    <div class="card-h">
+      <h2>Input</h2>
+      <div class="tabs" role="tablist">
+        <button role="tab" id="tab-single" aria-selected="true" onclick="setMode('single')">Single shipment</button>
+        <button role="tab" id="tab-batch" aria-selected="false" onclick="setMode('batch')">Batch (CSV)</button>
+      </div>
+    </div>
+
+    <div class="card-b">
+      <!-- SINGLE -->
+      <div id="pane-single">
+        <div class="grid" id="single-form"></div>
+        <div class="row-actions">
+          <button class="btn primary" onclick="runSingle()">Run audit</button>
+          <button class="linkbtn" onclick="loadSample()">Load sample shipment</button>
+          <button class="linkbtn" onclick="clearForm()">Clear</button>
+        </div>
+      </div>
+
+      <!-- BATCH -->
+      <div id="pane-batch" hidden>
+        <div class="drop" id="drop" tabindex="0" role="button" aria-label="Upload CSV file">
+          <strong>Drop a CSV of shipments here, or click to choose</strong>
+          <small>One row per shipment. Any column names — you'll map them next.</small>
+          <input type="file" id="file" accept=".csv,text/csv" hidden>
+        </div>
+        <div style="margin-top:10px"><button class="linkbtn" onclick="downloadSampleCSV()">Download a sample CSV template</button></div>
+        <div id="mapping" hidden>
+          <p class="hint" style="margin-top:20px"><strong id="rowcount"></strong> — match your columns to the 12 audit points (auto-detected where possible):</p>
+          <div class="map" id="map-grid"></div>
+          <div class="row-actions">
+            <button class="btn primary" onclick="runBatch()">Run audit on all shipments</button>
+            <button class="linkbtn" onclick="resetBatch()">Choose a different file</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- REPORT -->
+  <section class="card" id="report">
+    <div class="report-paper">
+      <div class="rp-head">
+        <div>
+          <h3 class="rp-title">Shipment Document Completeness Audit</h3>
+          <div class="rp-meta">
+            <div>Prepared for: <input id="clientName" placeholder="client / company name" aria-label="Client name"></div>
+            <div>Prepared by: <b>Azeem Ahmed · ChainPilot Tools</b></div>
+            <div>Date: <b id="repDate"></b></div>
+          </div>
+        </div>
+        <div id="stampSlot"></div>
+      </div>
+      <div id="report-body"></div>
+      <div class="rp-foot">
+        <span>ChainPilot Tools · chainpilottools@gmail.com</span>
+        <span>12-point standard: parties, ports, Incoterms 2020, goods, HS code, quantity, weight, container (ISO 6346), commercial invoice.</span>
+      </div>
+    </div>
+    <div class="report-actions no-print">
+      <button class="btn primary" onclick="window.print()">Print / Save as PDF</button>
+      <button class="btn ghost" id="csvBtn" onclick="downloadResults()" hidden>Download results (CSV)</button>
+    </div>
+  </section>
+</main>
+
+<script>
+/* ---------- 12-point audit standard ---------- */
+const INCOTERMS = ["EXW","FCA","CPT","CIP","DAP","DPU","DDP","FAS","FOB","CFR","CIF"];
+
+// input fields (value+currency feed one scored point)
+const FIELDS = [
+  {key:"shipper",  label:"Shipper / Exporter", syn:["shipper","exporter","seller","consignor","from"]},
+  {key:"consignee",label:"Consignee",          syn:["consignee","buyer","importer","receiver","to"]},
+  {key:"notify",   label:"Notify party",       syn:["notify","notifyparty","notify1"]},
+  {key:"pol",      label:"Port of loading",    syn:["portofloading","pol","loadport","origin","originport","from port"]},
+  {key:"pod",      label:"Port of discharge",  syn:["portofdischarge","pod","dischargeport","destination","destinationport","to port","finaldestination"]},
+  {key:"incoterm", label:"Incoterms (2020)",   syn:["incoterm","incoterms","terms","deliveryterms","tradeterms"], code:true},
+  {key:"goods",    label:"Goods description",  syn:["goods","description","commodity","goodsdescription","cargo","product"]},
+  {key:"hs",       label:"HS code",            syn:["hscode","hs","hsn","tariff","hts","htscode"], code:true},
+  {key:"qty",      label:"Quantity / packages",syn:["quantity","qty","packages","pkgs","noofpackages","pieces","units","cartons"], code:true},
+  {key:"weight",   label:"Gross weight",       syn:["grossweight","weight","grosswt","kgs","weightkg","grosskgs"], code:true},
+  {key:"container",label:"Container / equipment no.",syn:["container","containerno","containernumber","cntr","equipment","equipmentno"], code:true},
+  {key:"value",    label:"Invoice value",      syn:["invoicevalue","value","amount","declaredvalue","totalvalue","invoiceamount"], code:true},
+  {key:"currency", label:"Currency",           syn:["currency","curr","ccy"], code:true},
+];
+
+const num = s => { const n = Number(String(s).replace(/[, ]/g,"")); return isFinite(n)?n:NaN; };
+const T = v => (v==null?"":String(v)).trim();
+
+// ISO 6346 container check digit
+function containerStatus(raw){
+  const s = raw.toUpperCase().replace(/\s/g,"");
+  if(!/^[A-Z]{4}\d{7}$/.test(s)) return {status:"warn",note:"Format is not ISO 6346 (4 letters + 7 digits) — verify."};
+  const V={A:10,B:12,C:13,D:14,E:15,F:16,G:17,H:18,I:19,J:20,K:21,L:23,M:24,N:25,O:26,P:27,Q:28,R:29,S:30,T:31,U:32,V:34,W:35,X:36,Y:37,Z:38};
+  let sum=0; for(let i=0;i<10;i++){const c=s[i];sum += (/\d/.test(c)?+c:V[c])*Math.pow(2,i);}
+  let cd=sum%11; if(cd===10)cd=0;
+  if(cd!==+s[10]) return {status:"warn",note:"Check digit is invalid — likely a typo in the container number."};
+  return {status:"ok",note:"Valid ISO 6346 number."};
+}
+
+// the 12 scored checks -> {status, note, shown}
+const CHECKS = [
+  {no:1, pt:"Shipper", show:r=>T(r.shipper), fn:r=>{const v=T(r.shipper); if(!v)return miss("Shipper / exporter is missing."); return v.length<3?warn("Looks too short — verify."):ok();}},
+  {no:2, pt:"Consignee", show:r=>T(r.consignee), fn:r=>{const v=T(r.consignee); if(!v)return miss("Consignee is missing."); return v.length<3?warn("Looks too short — verify."):ok();}},
+  {no:3, pt:"Notify party", show:r=>T(r.notify), fn:r=>{const v=T(r.notify); return v?ok():warn("Not stated — often required by the carrier (can be 'same as consignee').");}},
+  {no:4, pt:"Port of loading", show:r=>T(r.pol), fn:r=>{const v=T(r.pol); if(!v)return miss("Port of loading is missing."); if(T(r.pod)&&v.toLowerCase()===T(r.pod).toLowerCase())return warn("Load and discharge port are identical — check."); return ok();}},
+  {no:5, pt:"Port of discharge", show:r=>T(r.pod), fn:r=>{const v=T(r.pod); return v?ok():miss("Port of discharge is missing.");}},
+  {no:6, pt:"Incoterms 2020", show:r=>T(r.incoterm).toUpperCase(), fn:r=>{const v=T(r.incoterm).toUpperCase(); if(!v)return miss("Incoterms not stated."); return INCOTERMS.includes(v)?ok():warn("Not a valid Incoterms 2020 code ("+INCOTERMS.join(", ")+").");}},
+  {no:7, pt:"Goods description", show:r=>T(r.goods), fn:r=>{const v=T(r.goods); if(!v)return miss("Goods description is missing."); return v.length<4?warn("Very brief — customs may query a vague description."):ok();}},
+  {no:8, pt:"HS code", show:r=>T(r.hs), fn:r=>{const v=T(r.hs).replace(/[.\s]/g,""); if(!v)return miss("HS code is missing."); if(!/^\d+$/.test(v))return warn("Should be digits only."); if(v.length<6)return warn("Only "+v.length+" digits — HS code needs at least 6."); if(v.length>10)return warn("More than 10 digits — verify."); return ok();}},
+  {no:9, pt:"Quantity / packages", show:r=>T(r.qty), fn:r=>{const v=T(r.qty); if(!v)return miss("Quantity / package count is missing."); const n=num(v); return (isNaN(n)||n<=0)?warn("Not a valid positive number."):ok();}},
+  {no:10,pt:"Gross weight", show:r=>T(r.weight), fn:r=>{const v=T(r.weight); if(!v)return miss("Gross weight is missing."); const n=num(v); return (isNaN(n)||n<=0)?warn("Not a valid positive number."):ok();}},
+  {no:11,pt:"Container no.", show:r=>T(r.container).toUpperCase(), fn:r=>{const v=T(r.container); return v?containerStatus(v):warn("No container / equipment no. — expected for FCL (may be blank for LCL / air).");}},
+  {no:12,pt:"Commercial invoice", show:r=>{const v=T(r.value),c=T(r.currency).toUpperCase();return v?(c?c+" "+v:v):"";}, fn:r=>{const v=T(r.value); if(!v)return miss("Invoice value is missing."); const n=num(v); if(isNaN(n)||n<=0)return warn("Invoice value is not a valid amount."); return T(r.currency)?ok():warn("Amount present but currency is not stated.");}},
+];
+function ok(note){return {status:"ok",note:note||"Complete."}}
+function warn(note){return {status:"warn",note}}
+function miss(note){return {status:"missing",note}}
+
+function audit(rec){
+  const results = CHECKS.map(c=>{const o=c.fn(rec); return {no:c.no,pt:c.pt,shown:c.show(rec),status:o.status,note:o.note};});
+  const pts = results.reduce((a,r)=>a+(r.status==="ok"?1:r.status==="warn"?0.5:0),0);
+  const score = Math.round(100*pts/CHECKS.length);
+  const missing = results.filter(r=>r.status==="missing").length;
+  const warns = results.filter(r=>r.status==="warn").length;
+  const oks = results.filter(r=>r.status==="ok").length;
+  const verdict = missing>0 ? "hold" : warns>0 ? "review" : "cleared";
+  return {results,score,missing,warns,oks,verdict};
+}
+
+/* ---------- Single mode ---------- */
+function buildForm(){
+  const g = document.getElementById("single-form");
+  g.innerHTML = FIELDS.filter(f=>f.key!=="currency").map(f=>{
+    const wide = ["shipper","consignee","goods"].includes(f.key);
+    if(f.key==="value"){
+      return `<div class="fld"><label class="lbl"><span class="n">12</span>Invoice value + currency</label>
+        <div class="pair"><span class="code"><input id="f_value" inputmode="decimal" placeholder="25000.00"></span>
+        <input id="f_currency" placeholder="USD" maxlength="3" style="text-transform:uppercase;font-family:var(--mono)"></div></div>`;
+    }
+    const nlabel = {shipper:"01",consignee:"02",notify:"03",pol:"04",pod:"05",incoterm:"06",goods:"07",hs:"08",qty:"09",weight:"10",container:"11"}[f.key];
+    return `<div class="fld ${wide?'col2':''}">
+      <label class="lbl" for="f_${f.key}"><span class="n">${nlabel}</span>${f.label}</label>
+      <span class="${f.code?'code':''}"><input id="f_${f.key}" placeholder="${ph(f.key)}"></span></div>`;
+  }).join("");
+}
+function ph(k){return {shipper:"ACME Exports Pvt Ltd, Mumbai",consignee:"Beta Trading BV, Rotterdam",notify:"Same as consignee",
+  pol:"INNSA — Nhava Sheva",pod:"NLRTM — Rotterdam",incoterm:"FOB",goods:"Cotton woven fabric, dyed",hs:"520852",
+  qty:"400 cartons",weight:"8600",container:"CSQU3054383"}[k]||"";}
+function clearForm(){FIELDS.forEach(f=>{const el=document.getElementById("f_"+f.key);if(el)el.value="";});document.getElementById("report").style.display="none";}
+function loadSample(){
+  const s={shipper:"ACME Exports Pvt Ltd, Mumbai",consignee:"Beta Trading BV, Rotterdam",notify:"",
+    pol:"INNSA Nhava Sheva",pod:"NLRTM Rotterdam",incoterm:"FOB",goods:"Cotton woven fabric, dyed",
+    hs:"5208",qty:"400",weight:"8600",container:"CSQU3054383",value:"25000",currency:""};
+  Object.entries(s).forEach(([k,v])=>{const el=document.getElementById("f_"+k);if(el)el.value=v;});
+}
+function readForm(){const r={};FIELDS.forEach(f=>{const el=document.getElementById("f_"+f.key);r[f.key]=el?el.value:"";});return r;}
+
+function runSingle(){
+  const rec = readForm();
+  const a = audit(rec);
+  document.getElementById("csvBtn").hidden = true;
+  stamp(a);
+  document.getElementById("report-body").innerHTML =
+    summaryHTML(a) + checklistTable(a.results);
+  showReport();
+}
+
+/* ---------- Batch mode ---------- */
+let CSV=null, HEADERS=null, MAP={}, LAST=null;
+
+function parseCSV(text){
+  const rows=[];let row=[],field="",i=0,inQ=false;
+  text=text.replace(/\r\n/g,"\n").replace(/\r/g,"\n");
+  while(i<text.length){const ch=text[i];
+    if(inQ){ if(ch==='"'){ if(text[i+1]==='"'){field+='"';i+=2;continue;} inQ=false;i++;continue;} field+=ch;i++;continue; }
+    if(ch==='"'){inQ=true;i++;continue;}
+    if(ch===','){row.push(field);field="";i++;continue;}
+    if(ch==='\n'){row.push(field);rows.push(row);row=[];field="";i++;continue;}
+    field+=ch;i++;
+  }
+  if(field!==""||row.length){row.push(field);rows.push(row);}
+  return rows.filter(r=>!(r.length===1&&r[0].trim()===""));
+}
+const norm = s => s.toLowerCase().replace(/[^a-z0-9]/g,"");
+function autoMap(headers){
+  const m={};
+  FIELDS.forEach(f=>{
+    let hit=-1;
+    headers.forEach((h,idx)=>{const nh=norm(h);
+      if(hit<0 && f.syn.some(s=>nh===norm(s)||nh.includes(norm(s))||norm(s).includes(nh))) hit=idx;});
+    m[f.key]=hit;
+  });
+  return m;
+}
+function handleFile(file){
+  const rd=new FileReader();
+  rd.onload=e=>{
+    const rows=parseCSV(e.target.result);
+    if(rows.length<2){alert("That CSV has no data rows.");return;}
+    HEADERS=rows[0].map(T); CSV=rows.slice(1).map(r=>{const o={};HEADERS.forEach((h,i)=>o[h]=r[i]||"");return o;});
+    MAP=autoMap(HEADERS); buildMapping(); document.getElementById("rowcount").textContent=CSV.length+" shipments loaded";
+    document.getElementById("mapping").hidden=false;
+  };
+  rd.readAsText(file);
+}
+function buildMapping(){
+  document.getElementById("map-grid").innerHTML = FIELDS.map(f=>{
+    const opts = ['<option value="-1">— not in file —</option>']
+      .concat(HEADERS.map((h,i)=>`<option value="${i}" ${MAP[f.key]===i?"selected":""}>${esc(h)}</option>`)).join("");
+    return `<div class="fld"><label class="lbl">${f.label}</label>
+      <select onchange="MAP['${f.key}']=+this.value">${opts}</select></div>`;
+  }).join("");
+}
+function recFromRow(rowObj){const r={};FIELDS.forEach(f=>{const idx=MAP[f.key];r[f.key]= idx>=0 ? T(rowObj[HEADERS[idx]]) : "";});return r;}
+
+function runBatch(){
+  const audits = CSV.map((rowObj,i)=>{const rec=recFromRow(rowObj);const a=audit(rec);return {i:i+1,rec,a};});
+  LAST=audits;
+  const avg = Math.round(audits.reduce((s,x)=>s+x.a.score,0)/audits.length);
+  const totalIssues = audits.reduce((s,x)=>s+x.a.missing+x.a.warns,0);
+  const holds = audits.filter(x=>x.a.verdict==="hold").length;
+  const clean = audits.filter(x=>x.a.verdict==="cleared").length;
+  const worst = audits.slice().sort((a,b)=>a.a.score-b.a.score).slice(0,1)[0];
+  stamp({verdict: holds>0?"hold":(avg<100?"review":"cleared"), score:avg});
+
+  let html = `<div class="agg">
+    <div><div class="num">${audits.length}</div><div class="cap">Shipments</div></div>
+    <div><div class="num">${avg}</div><div class="cap">Avg score /100</div></div>
+    <div><div class="num" style="color:var(--miss)">${holds}</div><div class="cap">On hold</div></div>
+    <div><div class="num" style="color:var(--ok)">${clean}</div><div class="cap">Cleared</div></div>
+    <div><div class="num" style="color:var(--warn)">${totalIssues}</div><div class="cap">Total issues</div></div>
+  </div>`;
+  html += `<table><thead><tr><th style="width:30px"></th><th>#</th><th>Shipment</th><th>Score</th><th>Issues</th><th>Status</th></tr></thead><tbody>`;
+  audits.forEach(x=>{
+    const id = x.i;
+    const ref = esc(T(x.rec.shipper)||T(x.rec.container)||("Row "+id));
+    const issues = x.a.missing+x.a.warns;
+    html += `<tr class="ship" onclick="toggle(${id})"><td class="no"><span class="caret">▸</span></td>
+      <td class="no">${id}</td><td>${ref}${x.rec.consignee?` <span style="color:var(--muted)">→ ${esc(T(x.rec.consignee))}</span>`:""}</td>
+      <td class="score ${x.a.verdict}">${x.a.score}</td>
+      <td>${issues?`${x.a.missing} missing · ${x.a.warns} warn`:"—"}</td>
+      <td><span class="chip ${x.a.verdict==='hold'?'missing':x.a.verdict==='review'?'warn':'ok'}">${x.a.verdict.toUpperCase()}</span></td></tr>`;
+    html += `<tr class="detail-row" id="d${id}" hidden><td colspan="6">${checklistTable(x.a.results)}</td></tr>`;
+  });
+  html += `</tbody></table>`;
+  document.getElementById("report-body").innerHTML = summaryLine(audits.length,avg) + html;
+  document.getElementById("csvBtn").hidden = false;
+  showReport();
+}
+function summaryLine(n,avg){return "";}
+function toggle(id){const d=document.getElementById("d"+id);const tr=d.previousElementSibling;d.hidden=!d.hidden;tr.classList.toggle("open",!d.hidden);}
+
+function downloadResults(){
+  if(!LAST)return;
+  const head=["#","Shipper","Consignee","Score","Verdict","Missing","Warnings"].concat(CHECKS.map(c=>c.pt));
+  const lines=[head];
+  LAST.forEach(x=>{
+    const row=[x.i,T(x.rec.shipper),T(x.rec.consignee),x.a.score,x.a.verdict.toUpperCase(),x.a.missing,x.a.warns]
+      .concat(x.a.results.map(r=>r.status));
+    lines.push(row);
+  });
+  const csv=lines.map(r=>r.map(c=>{c=String(c==null?"":c);return /[",\n]/.test(c)?'"'+c.replace(/"/g,'""')+'"':c;}).join(",")).join("\n");
+  const blob=new Blob([csv],{type:"text/csv"});const a=document.createElement("a");
+  a.href=URL.createObjectURL(blob);a.download="chainpilot-audit-results.csv";a.click();
+}
+function downloadSampleCSV(){
+  const csv=`Shipper,Consignee,Notify Party,Port of Loading,Port of Discharge,Incoterms,Goods Description,HS Code,Packages,Gross Weight,Container No,Invoice Value,Currency
+"ACME Exports Pvt Ltd, Mumbai","Beta Trading BV, Rotterdam",Same as consignee,INNSA Nhava Sheva,NLRTM Rotterdam,FOB,"Cotton woven fabric, dyed",520852,400,8600,CSQU3054383,25000,USD
+"Alpha Textiles, Surat","Delta Import GmbH, Hamburg",,INMUN Mundra,DEHAM Hamburg,CIF,Polyester yarn,5402,,12400,MSKU1234567,,EUR
+"Sunrise Metals, Chennai","Omega LLC, New York",Omega LLC,INMAA Chennai,USNYC New York,DDP,Steel fasteners,7318,150,3200,,9800,USD`;
+  const blob=new Blob([csv],{type:"text/csv"});const a=document.createElement("a");
+  a.href=URL.createObjectURL(blob);a.download="chainpilot-sample-shipments.csv";a.click();
+}
+function resetBatch(){CSV=null;HEADERS=null;document.getElementById("mapping").hidden=true;document.getElementById("file").value="";document.getElementById("report").style.display="none";}
+
+/* ---------- Shared report UI ---------- */
+function checklistTable(results){
+  return `<table><thead><tr><th>No</th><th>Audit point</th><th>Value</th><th>Status</th><th>Note</th></tr></thead><tbody>`
+    + results.map(r=>`<tr><td class="no">${String(r.no).padStart(2,"0")}</td><td class="pt">${r.pt}</td>
+      <td class="shown">${r.shown?esc(r.shown):'<span style="color:#B9AE90">—</span>'}</td>
+      <td><span class="chip ${r.status}">${r.status==="ok"?"OK":r.status==="warn"?"Warning":"Missing"}</span></td>
+      <td class="note">${esc(r.note)}</td></tr>`).join("")
+    + `</tbody></table>`;
+}
+function summaryHTML(a){
+  return `<div class="summary">
+    <div class="ok"><div class="num">${a.oks}</div><div class="cap">Complete</div></div>
+    <div class="warn"><div class="num">${a.warns}</div><div class="cap">Warnings</div></div>
+    <div class="miss"><div class="num">${a.missing}</div><div class="cap">Missing</div></div>
+    <div><div class="num">${a.score}</div><div class="cap">Score /100</div></div></div>`;
+}
+function stamp(a){
+  const map={cleared:["CLEARED","cleared"],review:["REVIEW","review"],hold:["HOLD","hold"]};
+  const [txt,cls]=map[a.verdict];
+  document.getElementById("stampSlot").innerHTML =
+    `<div class="stamp ${cls}"><div class="s-status">${txt}</div><div class="s-score">${a.score}/100</div></div>`;
+}
+function showReport(){
+  document.getElementById("repDate").textContent = new Date().toLocaleDateString("en-GB",{day:"2-digit",month:"short",year:"numeric"});
+  const rep=document.getElementById("report"); rep.style.display="block";
+  rep.scrollIntoView({behavior:"smooth",block:"start"});
+}
+function esc(s){return String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));}
+
+/* ---------- Mode switch + wiring ---------- */
+function setMode(m){
+  const single=m==="single";
+  document.getElementById("pane-single").hidden=!single;
+  document.getElementById("pane-batch").hidden=single;
+  document.getElementById("tab-single").setAttribute("aria-selected",single);
+  document.getElementById("tab-batch").setAttribute("aria-selected",!single);
+  document.getElementById("report").style.display="none";
+}
+const drop=document.getElementById("drop"), file=document.getElementById("file");
+drop.addEventListener("click",()=>file.click());
+drop.addEventListener("keydown",e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();file.click();}});
+drop.addEventListener("dragover",e=>{e.preventDefault();drop.classList.add("over");});
+drop.addEventListener("dragleave",()=>drop.classList.remove("over"));
+drop.addEventListener("drop",e=>{e.preventDefault();drop.classList.remove("over");if(e.dataTransfer.files[0])handleFile(e.dataTransfer.files[0]);});
+file.addEventListener("change",e=>{if(e.target.files[0])handleFile(e.target.files[0]);});
+
+buildForm();
+</script>
+</body>
+</html>
