@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ShipCheck AI — Document Cross-Check</title>
+<style>
+  :root {
+    --ink: #0f1720;
+    --steel: #1c2b3a;
+    --steel-light: #27394b;
+    --paper: #eef1f4;
+    --line: #3a4d61;
+    --pass: #4a9d6e;
+    --flag: #c9622d;
+    --mono: 'Courier New', monospace;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--ink);
+    color: var(--paper);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    min-height: 100vh;
+  }
+  .wrap { max-width: 720px; margin: 0 auto; padding: 32px 20px 80px; }
+
+  .eyebrow {
+    font-family: var(--mono);
+    font-size: 12px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: #7a90a4;
+    margin-bottom: 6px;
+  }
+  h1 {
+    font-size: 28px;
+    margin: 0 0 8px;
+    letter-spacing: -0.01em;
+  }
+  .sub {
+    color: #9fb2c3;
+    font-size: 15px;
+    line-height: 1.5;
+    margin-bottom: 32px;
+  }
+
+  .manifest {
+    background: var(--steel);
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    padding: 24px;
+    margin-bottom: 20px;
+  }
+  .slot {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 0;
+    border-bottom: 1px dashed var(--line);
+  }
+  .slot:last-child { border-bottom: none; }
+  .slot-label { font-family: var(--mono); font-size: 13px; color: #b7c6d4; }
+  .slot-file { font-size: 13px; color: #6f8397; max-width: 160px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .upload-btn {
+    background: var(--steel-light);
+    border: 1px solid var(--line);
+    color: var(--paper);
+    padding: 8px 14px;
+    border-radius: 3px;
+    font-size: 13px;
+    cursor: pointer;
+  }
+  .upload-btn:hover { background: #33475c; }
+  input[type=file] { display: none; }
+
+  .add-doc {
+    width: 100%;
+    background: transparent;
+    border: 1px dashed var(--line);
+    color: #7a90a4;
+    padding: 10px;
+    border-radius: 3px;
+    font-size: 13px;
+    cursor: pointer;
+    margin-top: 12px;
+  }
+  .add-doc:hover { color: var(--paper); border-color: #5a7086; }
+
+  .run-btn {
+    width: 100%;
+    background: var(--flag);
+    color: #fff;
+    border: none;
+    padding: 16px;
+    font-size: 15px;
+    font-weight: 600;
+    border-radius: 4px;
+    cursor: pointer;
+    margin-top: 8px;
+    letter-spacing: 0.01em;
+  }
+  .run-btn:disabled { background: #4a4038; cursor: not-allowed; opacity: 0.6; }
+  .run-btn:hover:not(:disabled) { background: #d97440; }
+
+  .status-line {
+    font-family: var(--mono);
+    font-size: 12px;
+    color: #7a90a4;
+    text-align: center;
+    margin-top: 10px;
+    min-height: 16px;
+  }
+
+  .result { margin-top: 28px; }
+  .stamp {
+    display: inline-block;
+    font-family: var(--mono);
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    padding: 8px 16px;
+    border: 2px solid;
+    border-radius: 3px;
+    transform: rotate(-1.5deg);
+    margin-bottom: 18px;
+  }
+  .stamp.pass { color: var(--pass); border-color: var(--pass); }
+  .stamp.flagged { color: var(--flag); border-color: var(--flag); }
+
+  .summary { font-size: 15px; color: #d3dde5; margin-bottom: 18px; line-height: 1.5; }
+
+  .discrepancy {
+    background: var(--steel);
+    border-left: 3px solid var(--flag);
+    border-radius: 0 4px 4px 0;
+    padding: 14px 16px;
+    margin-bottom: 10px;
+  }
+  .discrepancy .field { font-family: var(--mono); font-size: 12px; color: var(--flag); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px; }
+  .discrepancy .detail { font-size: 14px; color: var(--paper); line-height: 1.4; }
+  .discrepancy .docs { font-size: 12px; color: #7a90a4; margin-top: 6px; }
+
+  .error-box {
+    background: #3a2020;
+    border: 1px solid #7a3a3a;
+    color: #e8b0b0;
+    padding: 14px 16px;
+    border-radius: 4px;
+    font-size: 14px;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="eyebrow">ChainPilot Tools · ShipCheck AI</div>
+  <h1>Document Cross-Check</h1>
+  <p class="sub">Upload your shipment documents (invoice, packing list, bill of lading). The AI reads each one and flags anything that doesn't line up — before customs does.</p>
+
+  <div class="manifest" id="manifest"></div>
+  <button class="add-doc" id="addDocBtn">+ Add another document</button>
+  <button class="run-btn" id="runBtn" disabled>Upload at least 2 documents to run check</button>
+  <div class="status-line" id="statusLine"></div>
+
+  <div class="result" id="result"></div>
+</div>
+
+<script>
+const manifestEl = document.getElementById('manifest');
+const addDocBtn = document.getElementById('addDocBtn');
+const runBtn = document.getElementById('runBtn');
+const statusLine = document.getElementById('statusLine');
+const resultEl = document.getElementById('result');
+
+let docs = []; // { id, label, file, base64, mediaType }
+let docCounter = 0;
+
+const defaultLabels = ['Commercial Invoice', 'Packing List', 'Bill of Lading'];
+
+function addSlot(label) {
+  docCounter++;
+  const id = 'doc' + docCounter;
+  docs.push({ id, label, file: null, base64: null, mediaType: null });
+  renderManifest();
+}
+
+function renderManifest() {
+  manifestEl.innerHTML = '';
+  docs.forEach(d => {
+    const row = document.createElement('div');
+    row.className = 'slot';
+    row.innerHTML = `
+      <span class="slot-label">${d.label}</span>
+      <span class="slot-file" id="filename-${d.id}">${d.file ? d.file.name : 'No file'}</span>
+      <label class="upload-btn">
+        Choose file
+        <input type="file" accept="image/*,.pdf" data-id="${d.id}">
+      </label>
+    `;
+    manifestEl.appendChild(row);
+  });
+
+  manifestEl.querySelectorAll('input[type=file]').forEach(input => {
+    input.addEventListener('change', handleFileSelect);
+  });
+
+  updateRunButton();
+}
+
+function handleFileSelect(e) {
+  const id = e.target.getAttribute('data-id');
+  const file = e.target.files[0];
+  if (!file) return;
+
+  const doc = docs.find(d => d.id === id);
+  doc.file = file;
+  doc.mediaType = file.type || 'image/jpeg';
+
+  const reader = new FileReader();
+  reader.onload = () => {
+    doc.base64 = reader.result.split(',')[1];
+    document.getElementById('filename-' + id).textContent = file.name;
+    updateRunButton();
+  };
+  reader.readAsDataURL(file);
+}
+
+function updateRunButton() {
+  const readyCount = docs.filter(d => d.base64).length;
+  if (readyCount >= 2) {
+    runBtn.disabled = false;
+    runBtn.textContent = `Run cross-check on ${readyCount} documents`;
+  } else {
+    runBtn.disabled = true;
+    runBtn.textContent = 'Upload at least 2 documents to run check';
+  }
+}
+
+addDocBtn.addEventListener('click', () => {
+  const nextLabel = defaultLabels[docs.length] || `Document ${docs.length + 1}`;
+  addSlot(nextLabel);
+});
+
+runBtn.addEventListener('click', async () => {
+  const ready = docs.filter(d => d.base64);
+  runBtn.disabled = true;
+  statusLine.textContent = 'Reading documents and cross-checking…';
+  resultEl.innerHTML = '';
+
+  try {
+    const response = await fetch('/.netlify/functions/audit-ai', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        documents: ready.map(d => ({
+          name: d.file.name,
+          mediaType: d.mediaType,
+          base64: d.base64
+        }))
+      })
+    });
+
+    const data = await response.json();
+    statusLine.textContent = '';
+
+    if (!response.ok) {
+      resultEl.innerHTML = `<div class="error-box">${data.error || 'Something went wrong.'}</div>`;
+      updateRunButton();
+      return;
+    }
+
+    renderResult(data);
+  } catch (err) {
+    statusLine.textContent = '';
+    resultEl.innerHTML = `<div class="error-box">Network error: ${err.message}</div>`;
+  }
+  updateRunButton();
+});
+
+function renderResult(data) {
+  const passed = data.overall_status === 'PASS';
+  let html = `<div class="stamp ${passed ? 'pass' : 'flagged'}">${passed ? '✓ CLEAR' : '⚠ ISSUES FOUND'}</div>`;
+  html += `<div class="summary">${data.summary || ''}</div>`;
+
+  if (data.discrepancies && data.discrepancies.length) {
+    data.discrepancies.forEach(disc => {
+      html += `
+        <div class="discrepancy">
+          <div class="field">${disc.field}</div>
+          <div class="detail">${disc.detail}</div>
+          <div class="docs">Documents: ${(disc.documents_involved || []).join(' vs ')}</div>
+        </div>
+      `;
+    });
+  }
+
+  resultEl.innerHTML = html;
+}
+
+// Start with the two most common documents pre-added
+addSlot('Commercial Invoice');
+addSlot('Packing List');
+</script>
+</body>
+</html>
